@@ -763,3 +763,30 @@ function fnc__specialcol_(values, context) {
 function fnc_project_color(values, context) {
     return false;
 };
+
+
+
+function exp_No_topo_1312_2rule0_eval_expression(context) {
+    // "Топо" = 0
+
+    var feature = context.feature;
+    
+    if (feature.properties) {
+        return (feature.get('Топо')  == 0);
+    } else {
+        return (feature.get('Топо')  == 0);
+    }
+}
+
+
+function exp_No_topo_1312_2rule1_eval_expression(context) {
+    // Planshet = 0
+
+    var feature = context.feature;
+    
+    if (feature.properties) {
+        return (feature.get('Planshet')  == 0);
+    } else {
+        return (feature.get('Planshet')  == 0);
+    }
+}

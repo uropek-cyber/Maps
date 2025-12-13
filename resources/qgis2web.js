@@ -9,10 +9,33 @@ var map = new ol.Map({
 });
 
 //initial view - epsg:3857 coordinates if not "Match project CRS"
-map.getView().fit([3368686.563237, 8435527.997393, 3381269.091619, 8451564.171118], map.getSize());
+map.getView().fit([3371657.993629, 8435528.822417, 3380936.289232, 8449226.161693], map.getSize());
 
 //full zooms only
 map.getView().setProperties({constrainResolution: true});
+
+//change cursor
+function pointerOnFeature(evt) {
+    if (evt.dragging) {
+        return;
+    }
+    var hasFeature = map.hasFeatureAtPixel(evt.pixel, {
+        layerFilter: function(layer) {
+            return layer && (layer.get("interactive"));
+        }
+    });
+    map.getViewport().style.cursor = hasFeature ? "pointer" : "";
+}
+map.on('pointermove', pointerOnFeature);
+function styleCursorMove() {
+    map.on('pointerdrag', function() {
+        map.getViewport().style.cursor = "move";
+    });
+    map.on('pointerup', function() {
+        map.getViewport().style.cursor = "default";
+    });
+}
+styleCursorMove();
 
 ////small screen definition
     var hasTouchScreen = map.getViewport().classList.contains('ol-touch');
@@ -268,7 +291,7 @@ function onPointerMove(evt) {
                     highlightStyle = new ol.style.Style({
                         image: new ol.style.Circle({
                             fill: new ol.style.Fill({
-                                color: "#ffff00"
+                                color: "rgba(255, 255, 0, 1.00)"
                             }),
                             radius: radius
                         })
@@ -279,7 +302,7 @@ function onPointerMove(evt) {
 
                     highlightStyle = new ol.style.Style({
                         stroke: new ol.style.Stroke({
-                            color: '#ffff00',
+                            color: 'rgba(255, 255, 0, 1.00)',
                             lineDash: null,
                             width: featureWidth
                         })
@@ -288,7 +311,7 @@ function onPointerMove(evt) {
                 } else {
                     highlightStyle = new ol.style.Style({
                         fill: new ol.style.Fill({
-                            color: '#ffff00'
+                            color: 'rgba(255, 255, 0, 1.00)'
                         })
                     })
                 }
@@ -466,6 +489,7 @@ map.on('singleclick', onSingleClickWMS);
 //get container
 var topLeftContainerDiv = document.getElementById('top-left-container')
 var bottomLeftContainerDiv = document.getElementById('bottom-left-container')
+var topRightContainerDiv = document.getElementById('top-right-container')
 var bottomRightContainerDiv = document.getElementById('bottom-right-container')
 
 //title
@@ -475,6 +499,65 @@ var bottomRightContainerDiv = document.getElementById('bottom-right-container')
 
 //geolocate
 
+	let isTracking = false;
+
+	const geolocateButton = document.createElement('button');
+	geolocateButton.className = 'geolocate-button fa fa-map-marker';
+	geolocateButton.title = 'Geolocalizza';
+
+	const geolocateControl = document.createElement('div');
+	geolocateControl.className = 'ol-unselectable ol-control geolocate';
+	geolocateControl.appendChild(geolocateButton);
+	map.getTargetElement().appendChild(geolocateControl);
+
+	const accuracyFeature = new ol.Feature();
+	const positionFeature = new ol.Feature({
+	  style: new ol.style.Style({
+		image: new ol.style.Circle({
+		  radius: 6,
+		  fill: new ol.style.Fill({ color: '#3399CC' }),
+		  stroke: new ol.style.Stroke({ color: '#fff', width: 2 }),
+		}),
+	  }),
+	});
+
+  const geolocateOverlay = new ol.layer.Vector({
+	  source: new ol.source.Vector({
+		features: [accuracyFeature, positionFeature],
+	  }),
+	});
+	
+	const geolocation = new ol.Geolocation({
+	  projection: map.getView().getProjection(),
+	});
+
+	geolocation.on('change:accuracyGeometry', function () {
+	  accuracyFeature.setGeometry(geolocation.getAccuracyGeometry());
+	});
+
+	geolocation.on('change:position', function () {
+	  const coords = geolocation.getPosition();
+	  positionFeature.setGeometry(coords ? new ol.geom.Point(coords) : null);
+	});
+
+	geolocation.setTracking(true);
+
+	function handleGeolocate() {
+	  if (isTracking) {
+		map.removeLayer(geolocateOverlay);
+		isTracking = false;
+	  } else if (geolocation.getTracking()) {
+		map.addLayer(geolocateOverlay);
+		const pos = geolocation.getPosition();
+		if (pos) {
+		  map.getView().setCenter(pos);
+		}
+		isTracking = true;
+	  }
+	}
+
+	geolocateButton.addEventListener('click', handleGeolocate);
+	geolocateButton.addEventListener('touchstart', handleGeolocate);
 
 
 //measurement
@@ -1010,18 +1093,6 @@ let measuring = false;
 
 //layer search
 
-var searchLayer = new SearchLayer({
-    layer: lyr__1,
-    colName: 'Name',
-    zoom: 10,
-    collapsed: true,
-    map: map,
-    maxResults: 10,
-});
-map.addControl(searchLayer);
-document.getElementsByClassName('search-layer')[0].getElementsByTagName('button')[0].className += ' fa fa-binoculars';
-document.getElementsByClassName('search-layer-input-search')[0].placeholder = 'Search feature ...';
-    
 
 //scalebar
 
@@ -1029,22 +1100,11 @@ document.getElementsByClassName('search-layer-input-search')[0].placeholder = 'S
 //layerswitcher
 
 var layerSwitcher = new ol.control.LayerSwitcher({
-    activationMode: 'click',
-	startActive: true,
-	tipLabel: "Layers",
-    target: 'top-right-container',
-	collapseLabel: '»',
-	collapseTipLabel: 'Close'
-    });
+    tipLabel: "Layers",
+    target: 'top-right-container'
+});
 map.addControl(layerSwitcher);
-if (hasTouchScreen || isSmallScreen) {
-	document.addEventListener('DOMContentLoaded', function() {
-		setTimeout(function() {
-			layerSwitcher.hidePanel();
-		}, 500);
-	});	
-}
-
+    
 
 
 
